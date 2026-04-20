@@ -1,0 +1,133 @@
+# OpenShelf — System Architecture (MVP v1)
+
+## Architecture Overview
+
+MVP v1 is a **monolithic FastAPI application** with a SQLite database. All components run in a single Python process.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     CLIENT (Browser)                        │
+│                  Swagger UI at /docs                        │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ HTTP (REST)
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    FastAPI Application                       │
+│                                                             │
+│  ┌─────────┐  ┌──────────┐  ┌──────────┐  ┌────────────┐  │
+│  │  Auth   │  │ Courses  │  │ Listings │  │  Matching  │  │
+│  │ Router  │  │  Router  │  │  Router  │  │   Router   │  │
+│  └────┬────┘  └────┬─────┘  └────┬─────┘  └─────┬──────┘  │
+│       │            │             │               │          │
+│  ┌────┴────┐  ┌────┴─────┐  ┌───┴────┐  ┌──────┴───────┐  │
+│  │Messages │  │ Reviews  │  │ Notif  │  │  AI Pricing  │  │
+│  │ Router  │  │  Router  │  │ Router │  │   Service    │  │
+│  └────┬────┘  └────┬─────┘  └───┬────┘  └──────┬───────┘  │
+│       │            │            │               │           │
+│  ┌────┴────────────┴────────────┴───────────────┴────────┐  │
+│  │              SQLAlchemy ORM Layer                      │  │
+│  │         (Models, Sessions, Queries)                    │  │
+│  └───────────────────────┬───────────────────────────────┘  │
+│                          │                                   │
+│  ┌───────────────────────┴───────────────────────────────┐  │
+│  │               Auth Service (JWT + bcrypt)              │  │
+│  └───────────────────────────────────────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ SQLAlchemy
+                           ▼
+              ┌────────────────────────┐
+              │   SQLite Database      │
+              │   (openshelf.db)       │
+              │                        │
+              │  11 normalized tables  │
+              │  with PK/FK integrity  │
+              └────────────────────────┘
+```
+
+## Data Flow — Matching Engine
+
+```
+Student enrolls in courses
+         │
+         ▼
+┌─────────────────┐
+│   enrollments   │──→ Which courses does this student take?
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│course_textbooks  │──→ Which textbooks do those courses require?
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│    listings     │──→ Which active listings exist for those textbooks?
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Scoring Engine │──→ Score each listing (condition + price + recency)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│    matches      │──→ Store ranked results for the buyer
+└─────────────────┘
+```
+
+## Data Flow — AI Price Recommendation
+
+```
+Seller wants to list a book
+         │
+         ▼
+┌─────────────────┐
+│   textbooks     │──→ Get retail MSRP for this ISBN
+└────────┬────────┘
+         │
+         ▼
+┌────────────────────┐
+│ Condition          │──→ Apply multiplier (new=85%, good=55%, fair=40%...)
+│ Multiplier         │
+└────────┬───────────┘
+         │
+         ▼
+┌────────────────────┐
+│ Market Scan        │──→ Check existing listings for same textbook
+│ (listings table)   │──→ Calculate average market price
+└────────┬───────────┘
+         │
+         ▼
+┌────────────────────┐
+│ Blended Price      │──→ 60% condition-based + 40% market average
+│ + Reasoning        │──→ Return recommended price + explanation
+└────────────────────┘
+```
+
+## Evolution to MVP v2
+
+```
+MVP v1 (Current)                    MVP v2 (April 2026)
+─────────────────                   ──────────────────────
+Swagger UI (browser)          →     React + Tailwind PWA
+SQLite                        →     MySQL (encryption at rest)
+HTTP only                     →     HTTPS/TLS
+JWT (basic)                   →     JWT + University SSO
+Rule-based matching           →     Rule-based matching (same)
+Rule-based pricing            →     Rule-based pricing (same)
+No chatbot                    →     Ollama + RAG + ChromaDB chatbot
+No real-time messaging        →     WebSocket private chat
+No notifications              →     In-app notification UI
+No frontend                   →     Full buyer/seller dashboard
+```
+
+## Security Considerations (MVP v1 → v2)
+
+| Concern | MVP v1 | MVP v2 Target |
+|---------|--------|---------------|
+| Passwords | bcrypt hashed ✓ | bcrypt hashed ✓ |
+| Auth tokens | JWT (HS256) | JWT (HS256) + SSO |
+| Transport | HTTP (local demo) | HTTPS/TLS |
+| Data at rest | SQLite (unencrypted) | MySQL (encrypted) |
+| Input validation | Pydantic schemas ✓ | Pydantic schemas ✓ |
+| CORS | Open (dev) | Restricted origins |
