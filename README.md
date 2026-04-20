@@ -1,19 +1,34 @@
-# OpenShelf MVP v1 — Backend Proof of Concept
+# OpenShelf MVP v2 — AI-Powered Campus Textbook Marketplace
 
 ## Overview
 
-OpenShelf is an AI-powered campus textbook marketplace. This is **MVP v1** — a backend proof of concept built to demonstrate that all core systems work: normalized database, CRUD operations, rule-based matching engine, AI price recommendations, messaging, reviews, and JWT authentication.
+OpenShelf is an AI-powered campus textbook marketplace connecting student buyers with alumni and peer sellers. **MVP v2** ships a full-stack application: a React + Tailwind frontend served alongside a FastAPI backend, with real-time WebSocket chat, an AI chatbot assistant, image uploads, and a significantly expanded dataset.
 
-**Purpose:** Demo to CGI mentor (Pasha) via Zoom. Walk through FastAPI Swagger UI to show data flowing correctly across all endpoints.
+**Purpose:** Live demo for CGI Hartford presentation (April 2026). The app runs end-to-end — login, browse listings, message a seller, and interact with the OpenShelf AI assistant — all without leaving the browser.
+
+---
+
+## What's New in v2
+
+| Feature | v1 | v2 |
+|---------|----|----|
+| Frontend UI | None (Swagger only) | React + Tailwind PWA |
+| Real-time chat | REST polling | WebSocket (`/ws/chat/{id}`) |
+| AI Chatbot | — | OpenShelf assistant (`/chat`) |
+| Conversations | Direct messages | Structured conversation model |
+| Agentic messaging | — | Auto-generated buyer opener |
+| Image uploads | — | `/uploads` (JPG/PNG/GIF/WebP, 5 MB max) |
+| Seller listings view | — | Dedicated seller dashboard page |
+| Seed data | 10 users, 20 listings | 22 users, 41 listings |
 
 ---
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Install Backend Dependencies
 
 ```bash
-# Recommended: use a virtual environment
+cd backend
 python -m venv venv
 source venv/bin/activate        # macOS/Linux
 # venv\Scripts\activate         # Windows
@@ -24,84 +39,40 @@ pip install -r requirements.txt
 ### 2. Seed the Database
 
 ```bash
+# from the backend/ directory
 python seed.py
 ```
 
 This creates `openshelf.db` (SQLite) and populates it with:
-- 1 university (USJ)
-- 10 users (8 students + 2 alumni)
-- 8 courses across departments
-- 15 textbooks with real ISBNs and retail prices
-- 15 course-textbook mappings
-- 24 student enrollments
-- 20 active listings with AI-recommended prices
-- 7 messages (sample conversations)
-- 4 reviews
-- 5 notifications
+- 1 university (University of Saint Joseph)
+- 22 users (18 students + 4 alumni)
+- 16 courses across departments
+- 30 textbooks with real ISBNs, retail prices, and Open Library cover images
+- 29 course-textbook mappings
+- 56 student enrollments
+- 41 active listings with AI-recommended prices
+- 7 conversations with 19 messages
+- 10 reviews
+- 14 notifications
 
-### 3. Start the Server
+### 3. Start the Backend
 
 ```bash
+# from the backend/ directory
 python main.py
 ```
 
 Server runs at `http://localhost:8000`
 
-### 4. Open Swagger UI
+### 4. Start the Frontend
 
-Navigate to **http://localhost:8000/docs** in your browser.
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
----
-
-## Demo Walkthrough \\
-
-Use the Swagger UI to demonstrate each system. Here's a suggested order:
-
-### Step 1: Health Check
-- `GET /` — shows the app is running
-
-### Step 2: Authentication
-- `POST /auth/login` — login with `noah.grauer@usj.edu` / `openshelf123`
-- Copy the `access_token` from the response
-- Click the **Authorize** button (lock icon, top right of Swagger), paste the token
-- `GET /auth/me` — confirms authenticated user
-
-### Step 3: Browse Courses & Textbooks
-- `GET /courses/?university_id=1&semester=Spring 2026` — see all 8 courses
-- `GET /courses/1/textbooks` — see required textbooks for CS 301
-- `GET /courses/user/1/enrollments` — see Noah's 4 enrolled courses
-- `GET /textbooks/?title=algorithm` — search textbooks by title
-
-### Step 4: Search Listings
-- `GET /listings/` — see all 20 active listings with seller and textbook details
-- `GET /listings/?course_id=1` — filter listings for CS 301 textbooks only
-- `GET /listings/?min_price=20&max_price=50` — price range filter
-- `GET /listings/?condition=good` — condition filter
-- `GET /listings/1` — get a single listing with full details
-
-### Step 5: AI Price Recommendation
-- `POST /listings/ai-price` — body: `{"textbook_id": 1, "condition": "good"}`
-- Shows recommended price, reasoning, savings vs retail
-- Try different conditions to see pricing logic adjust
-
-### Step 6: Matching Engine (Core AI Feature)
-- `POST /matches/generate/1` — run the matching engine for Noah (user_id=1)
-- Returns scored, ranked listings matching Noah's enrolled courses
-- Each match shows score (0-100), listing details, seller info
-- `GET /matches/1` — retrieve existing matches
-
-### Step 7: Messaging
-- `POST /messages/` — send a message (requires auth): `{"receiver_id": 9, "listing_id": 1, "content": "Is this still available?", "is_agentic": true}`
-- `GET /messages/conversation/1/9` — see conversation thread between Noah and Alex
-- `GET /messages/inbox/1` — see Noah's full inbox
-
-### Step 8: Reviews & Reputation
-- `GET /reviews/user/9` — see reviews for Alex (seller)
-- `GET /reviews/user/9/profile` — see Alex's profile with average rating and stats
-
-### Step 9: Notifications
-- `GET /notifications/1` — see Noah's notifications
-- `PUT /notifications/1/read` — mark a notification as read
+Frontend runs at `http://localhost:5173`
 
 ---
 
@@ -109,9 +80,9 @@ Use the Swagger UI to demonstrate each system. Here's a suggested order:
 
 | User | Email | Role | Use Case |
 |------|-------|------|----------|
-| Noah Grauer | noah.grauer@usj.edu | Student | Primary buyer persona |
+| Noah Grauer | noah.grauer@usj.edu | Student | Primary buyer + has 1 listing |
+| Alex Martinez | alex.martinez@usj.edu | Alumni | Primary seller (6 listings) |
 | Emily Chen | emily.chen@usj.edu | Student | Buyer + seller |
-| Alex Martinez | alex.martinez@usj.edu | Alumni | Primary seller persona |
 | Rachel Nguyen | rachel.nguyen@usj.edu | Alumni | Seller |
 
 **Password for all accounts:** `openshelf123`
@@ -122,69 +93,104 @@ Use the Swagger UI to demonstrate each system. Here's a suggested order:
 
 ```
 openshelf-mvp-v1/
-├── main.py                          # FastAPI app entry point
-├── seed.py                          # Database seeder with mock data
-├── requirements.txt                 # Python dependencies
-├── README.md                        # This file
-├── app/
-│   ├── __init__.py
-│   ├── config.py                    # App settings, JWT config, DB URL
-│   ├── database.py                  # SQLAlchemy engine, session, Base
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── models.py                # All ORM models (10 tables)
-│   ├── schemas/
-│   │   ├── __init__.py
-│   │   └── schemas.py               # Pydantic request/response schemas
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── auth_service.py          # JWT + bcrypt authentication
-│   │   └── matching_engine.py       # Rule-based matching + AI pricing
-│   └── routers/
-│       ├── __init__.py
-│       ├── auth.py                  # POST /auth/register, /login, GET /me
-│       ├── courses.py               # GET /courses, /{id}/textbooks, enrollments
-│       ├── textbooks.py             # GET /textbooks, search, by ISBN
-│       ├── listings.py              # CRUD + search/filter + AI price
-│       ├── matching.py              # POST generate matches, GET matches
-│       ├── messages.py              # POST send, GET conversation, inbox
-│       ├── reviews.py               # POST review, GET user reviews + profile
-│       └── notifications.py         # GET notifications, PUT mark read
-└── docs/
-    └── ARCHITECTURE.md              # System architecture documentation
+├── backend/
+│   ├── main.py                          # FastAPI app entry point
+│   ├── seed.py                          # Database seeder with mock data
+│   ├── requirements.txt
+│   ├── uploads/                         # Uploaded listing images
+│   └── app/
+│       ├── config.py                    # Settings, JWT config, DB URL
+│       ├── database.py                  # SQLAlchemy engine + session
+│       ├── models/
+│       │   └── models.py                # All ORM models (11 tables)
+│       ├── schemas/
+│       │   └── schemas.py               # Pydantic request/response schemas
+│       ├── services/
+│       │   ├── auth_service.py          # JWT + bcrypt authentication
+│       │   ├── matching_engine.py       # Rule-based matching + AI pricing
+│       │   ├── chatbot_service.py       # OpenShelf assistant logic
+│       │   ├── chatbot_prompt.py        # Prompt templates for the chatbot
+│       │   └── messaging_service.py     # Agentic first-message generation
+│       └── routers/
+│           ├── auth.py                  # /auth — register, login, me
+│           ├── courses.py               # /courses
+│           ├── textbooks.py             # /textbooks
+│           ├── listings.py              # /listings — CRUD + AI price
+│           ├── matching.py              # /matches — matching engine
+│           ├── conversations.py         # /conversations — structured chat
+│           ├── messages.py              # /messages — legacy compat shim
+│           ├── chat.py                  # /chat — AI chatbot endpoint
+│           ├── websocket.py             # /ws/chat/{id} — real-time chat
+│           ├── uploads.py               # /uploads — image upload
+│           ├── reviews.py               # /reviews
+│           └── notifications.py         # /notifications
+└── frontend/
+    ├── index.html
+    ├── vite.config.js
+    ├── package.json
+    └── src/
+        ├── App.jsx
+        ├── contexts/
+        │   └── AuthContext.jsx           # JWT auth state + login/logout
+        ├── hooks/
+        │   └── useChatSocket.js          # WebSocket hook for real-time chat
+        ├── lib/
+        │   ├── api.js                    # Axios client + API helpers
+        │   └── utils.js
+        ├── components/
+        │   ├── DashboardLayout.jsx       # Sidebar + nav shell
+        │   ├── ListingCard.jsx           # Listing preview card
+        │   ├── ChatbotWidget.jsx         # Floating AI assistant widget
+        │   ├── NotificationBell.jsx      # Notification dropdown
+        │   └── AuthRoute.jsx             # Protected route wrapper
+        └── pages/
+            ├── LoginPage.jsx
+            ├── RegisterPage.jsx
+            ├── DashboardPage.jsx         # Matched listings for enrolled courses
+            ├── ShoppingView.jsx          # Browse + filter all listings
+            ├── ListingDetailPage.jsx     # Single listing + contact seller
+            ├── MyListingsView.jsx        # Buyer's active conversations
+            ├── SellerListingsPage.jsx    # Seller's own listings management
+            ├── MessagesView.jsx          # Real-time conversation view
+            └── UserProfilePage.jsx       # Profile + review history
 ```
 
 ---
 
-## Database Schema (10 Normalized Tables)
+## Key Features
+
+### React Frontend
+A Vite-built React app styled with Tailwind CSS. JWT tokens are stored in context and passed as Authorization headers on every API call. The app is organized around a persistent sidebar layout with protected routes — unauthenticated users are redirected to login.
+
+### Real-Time WebSocket Chat
+Buyers and sellers communicate through persistent WebSocket connections:
 
 ```
-universities ─┬─→ users ──────┬─→ enrollments ←── courses ──→ course_textbooks ←── textbooks
-              │               ├─→ listings ────────────────────────────────────────────┘
-              │               ├─→ messages
-              │               ├─→ reviews
-              │               └─→ notifications
-              └─→ courses
+ws://localhost:8000/ws/chat/{conversation_id}?token=<jwt>
 ```
 
-### Tables & Relationships
-| Table | Purpose | Key Relationships |
-|-------|---------|-------------------|
-| universities | Campus instances | Has many users, courses |
-| users | Students + alumni | Belongs to university; has enrollments, listings, messages, reviews |
-| courses | Course catalog | Belongs to university; has textbooks (via course_textbooks), enrollments |
-| textbooks | Canonical book records | Has listings, linked to courses via course_textbooks |
-| course_textbooks | Many-to-many: courses ↔ textbooks | Includes is_required flag |
-| enrollments | Many-to-many: users ↔ courses | Unique per (user, course, semester) |
-| listings | Books for sale | Belongs to seller (user) and textbook; has matches, messages, reviews |
-| matches | Buyer-listing connections | Scored by matching engine; links buyer to listing |
-| messages | Buyer-seller communication | Between two users, optionally about a listing |
-| reviews | Seller reputation | Reviewer → reviewed user, tied to a listing |
-| notifications | User alerts | Match alerts, offers, messages, resale reminders |
+The in-process connection manager broadcasts messages to all active sockets in a conversation. Notifications are created for the other participant on every send. The conversation status auto-upgrades from `pending` → `active` on the seller's first reply.
+
+### AI Chatbot Assistant
+The OpenShelf assistant (`POST /chat`) is auth-gated and identity-aware — it knows which courses the caller is enrolled in and uses that context to personalize responses (e.g., "find me the CS 301 book" filters by the user's actual enrollments).
+
+### Agentic Messaging
+When a buyer starts a conversation without providing an initial message, the backend auto-generates a natural opener on their behalf using their name, the textbook title, and the seller's name. Buyers can override this with their own message.
+
+### Image Uploads
+Sellers can attach photos to listings via `POST /uploads`. The endpoint accepts JPG, JPEG, PNG, GIF, and WebP files up to 5 MB and returns a URL path served statically by FastAPI.
+
+### Conversations Model
+A structured `Conversation` resource links a buyer, seller, and listing. This replaces the v1 direct-message model:
+
+- `POST /conversations` — start or resume a conversation about a listing
+- `GET /conversations` — inbox view (sorted by most recent activity, with unread counts)
+- `GET /conversations/{id}` — full thread (marks incoming messages as read)
+- `POST /conversations/{id}/messages` — append a message via REST (alternative to WebSocket)
 
 ---
 
-## API Endpoints (28 Total)
+## API Endpoints
 
 ### Authentication (3)
 | Method | Endpoint | Description |
@@ -204,7 +210,7 @@ universities ─┬─→ users ──────┬─→ enrollments ←─�
 ### Textbooks (3)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | /textbooks/ | Search textbooks (isbn, title, author) |
+| GET | /textbooks/ | Search (isbn, title, author) |
 | GET | /textbooks/{id} | Get by ID |
 | GET | /textbooks/isbn/{isbn} | Get by ISBN |
 
@@ -224,19 +230,36 @@ universities ─┬─→ users ──────┬─→ enrollments ←─�
 | POST | /matches/generate/{user_id} | Run matching engine for buyer |
 | GET | /matches/{user_id} | Get existing matches |
 
-### Messages (3)
+### Conversations (5)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | /messages/ | Send message (auth required) |
-| GET | /messages/conversation/{uid}/{other_uid} | Conversation thread |
-| GET | /messages/inbox/{uid} | User's full inbox |
+| POST | /conversations/ | Start or resume a conversation |
+| GET | /conversations/ | Inbox (auth required) |
+| GET | /conversations/{id} | Full thread + mark read |
+| GET | /conversations/{id}/messages | Message list (no read marking) |
+| POST | /conversations/{id}/messages | Send a message via REST |
+
+### WebSocket (1)
+| Protocol | Endpoint | Description |
+|----------|----------|-------------|
+| WS | /ws/chat/{conversation_id}?token= | Real-time chat |
+
+### Chatbot (1)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /chat/ | Send message to OpenShelf assistant (auth required) |
+
+### Uploads (1)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /uploads/ | Upload listing image (JPG/PNG/GIF/WebP, max 5 MB) |
 
 ### Reviews (3)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /reviews/ | Submit review (auth required) |
 | GET | /reviews/user/{uid} | Reviews for a user |
-| GET | /reviews/user/{uid}/profile | User profile with stats |
+| GET | /reviews/user/{uid}/profile | Profile with average rating + stats |
 
 ### Notifications (3)
 | Method | Endpoint | Description |
@@ -255,12 +278,12 @@ universities ─┬─→ users ──────┬─→ enrollments ←─�
 
 ## Matching Engine — How It Works
 
-The rule-based matching engine connects buyers to relevant listings based on their course enrollments. It is **not** a trained ML model — this is intentional. A rules-based approach is explainable, debuggable, and appropriate for MVP scope.
+The rule-based matching engine connects buyers to relevant listings based on their enrolled courses. It is not a trained ML model — this is intentional. A rules-based approach is explainable, debuggable, and appropriate for MVP scope.
 
 ### Matching Flow
 1. Get buyer's enrolled courses
-2. Find required textbooks for those courses (via course_textbooks table)
-3. Find active listings for those textbooks (excluding buyer's own listings)
+2. Find required textbooks for those courses (via `course_textbooks` table)
+3. Find active listings for those textbooks (excluding the buyer's own listings)
 4. Score each listing on a 0–100 scale
 
 ### Scoring Criteria
@@ -275,7 +298,21 @@ The rule-based matching engine connects buyers to relevant listings based on the
 When a seller creates a listing, the system recommends a price based on:
 1. **Retail MSRP** of the textbook (from catalog)
 2. **Condition multiplier** (New=85%, Like New=70%, Good=55%, Fair=40%, Poor=25%)
-3. **Market adjustment** — blends condition-based price (60%) with average of existing listings (40%)
+3. **Market adjustment** — blends condition-based price (60%) with the average of existing listings (40%)
+
+---
+
+## Database Schema (11 Normalized Tables)
+
+```
+universities ─┬─→ users ──────┬─→ enrollments ←── courses ──→ course_textbooks ←── textbooks
+              │               ├─→ listings ────────────────────────────────────────────┘
+              │               ├─→ conversations (buyer + seller)
+              │               ├─→ messages ←── conversations
+              │               ├─→ reviews
+              │               └─→ notifications
+              └─→ courses
+```
 
 ---
 
@@ -285,27 +322,10 @@ When a seller creates a listing, the system recommends a price based on:
 |---------|---------------|
 | Password storage | bcrypt hash (never stored in plaintext) |
 | Authentication | JWT Bearer tokens (24h expiry for demo) |
+| WebSocket auth | JWT via `?token=` query param |
 | Auth enforcement | Protected endpoints require valid token |
 
-**Note:** MVP uses SQLite for self-contained demo. Will migrate to mysql in a future build.
-
----
-
-## What This MVP Does NOT Include
-
-These are scoped for **MVP v2** (April 2026):
-- Frontend UI (React + Tailwind PWA)
-- AI Chatbot (Ollama + RAG + ChromaDB)
-- WebSocket real-time chat
-- Push notifications
-- University SSO authentication (mocked)
-- LMS/Blackboard integration (mocked through screenshots)
-
-## Future Ideas
-
-These are not scoped for MVP use but can be implemented
--online hosting via apache web server
--MySQL with encryption at rest and HTTPS/TLS in transit.
+**Note:** MVP uses SQLite for self-contained demo. Will migrate to MySQL in a future build.
 
 ---
 
@@ -324,4 +344,14 @@ python main.py
 ```
 
 **Import errors:**
-Make sure you're in the `openshelf-mvp-v1/` directory when running commands.
+Make sure you're running commands from inside the `backend/` directory.
+
+---
+
+## Future Work
+
+- Online hosting via Apache or cloud provider
+- MySQL with encryption at rest and HTTPS/TLS in transit
+- University SSO / LMS integration (currently mocked)
+- RAG-based chatbot using Ollama + ChromaDB
+- Push notifications (mobile PWA)
