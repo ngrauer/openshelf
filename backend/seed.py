@@ -373,6 +373,8 @@ def seed():
             (hannah, essentials_soc, BookCondition.fair, 30.00, "Some highlighting. Fully functional."),
             # Natalie selling
             (natalie, pathophysiology, BookCondition.new, 90.00, "Brand new, got a digital copy instead."),
+            # Noah selling (from last semester)
+            (noah, calculus_stewart, BookCondition.good, 55.00, "Used for Calculus I last semester. Light pencil notes in a few chapters, easily erased. Spine solid."),
         ]
 
         listings = []
